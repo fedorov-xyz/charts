@@ -62,7 +62,7 @@ kubectl create secret generic redis-auth \
 
 ```bash
 helm upgrade --install redis \
-  oci://ghcr.io/fedorov-xyz/charts/redis --version 0.1.4 \
+  oci://ghcr.io/fedorov-xyz/charts/redis --version 0.1.5 \
   --namespace default \
   --set auth.existingSecret=redis-auth
 ```
@@ -81,7 +81,7 @@ helm upgrade --install redis ./redis \
 
 | Чарт  | Версия | Описание                                      |
 |-------|--------|-----------------------------------------------|
-| redis | 0.1.4  | Redis 8 + redis_exporter, StatefulSet + PVC   |
+| redis | 0.1.5  | Redis 8 + redis_exporter, StatefulSet + PVC   |
 
 ### redis — кастомизация
 
