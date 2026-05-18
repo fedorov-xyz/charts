@@ -1,0 +1,78 @@
+# --- customizable ---
+auth:
+  # existingSecret: redis-auth  # обязателен при установке
+  existingSecretPasswordKey: password
+
+config: |
+  bind 0.0.0.0
+
+  dir /data
+  dbfilename dump.rdb
+  save 900 1
+  save 300 10
+  save 60 10000
+
+  appendonly yes
+  appendfilename appendonly.aof
+  appenddirname appendonlydir
+
+  maxmemory 800mb
+  maxmemory-policy volatile-lru
+
+  loglevel notice
+  logfile ""
+
+# rolling restart при смене ConfigMap / ссылки на Secret
+configmapChecksumAnnotations: true
+authChecksumAnnotations: true
+
+# --- defaults (override in values if needed) ---
+replicaCount: 1
+revisionHistoryLimit: 10
+image:
+  redis:
+    repository: redis
+    tag: "8.6"
+    pullPolicy: IfNotPresent
+  exporter:
+    repository: oliver006/redis_exporter
+    tag: v1.83.0
+
+service:
+  port: 6379
+
+persistence:
+  enabled: true
+  storageClass: topolvm-provisioner
+  size: 5Gi
+
+resources:
+  redis:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 1.5Gi
+  exporter:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+metrics:
+  enabled: true
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    prometheus.io/path: /metrics
+
+securityContext:
+  fsGroup: 999
+  runAsUser: 999
+  runAsGroup: 999
+  runAsNonRoot: true
+
+terminationGracePeriodSeconds: 60

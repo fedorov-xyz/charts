@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '*/Chart.yaml'
+      - '*/values.yaml'
+      - '*/values.schema.json'
+      - '*/templates/**'
+      - '*/.helmignore'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  OCI_REGISTRY: ghcr.io
+  HELM_EXPERIMENTAL_OCI: "1"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login "${OCI_REGISTRY}" \
+                -u "${{ github.actor }}" --password-stdin
+
+      - name: Package and push new chart versions
+        env:
+          OCI_REPO: oci://${{ env.OCI_REGISTRY }}/${{ github.repository_owner }}/charts
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/packages
+          pushed=0
+          for chart_yaml in */Chart.yaml; do
+            dir="$(dirname "$chart_yaml")"
+            name="$(awk '/^name:/{print $2; exit}' "$chart_yaml")"
+            version="$(awk '/^version:/{print $2; exit}' "$chart_yaml")"
+            ref="${OCI_REPO}/${name}"
+            echo "==> ${name} ${version}"
+            if helm show chart "${ref}" --version "${version}" >/dev/null 2>&1; then
+              echo "    already published, skipping"
+              continue
+            fi
+            helm dependency update "${dir}" >/dev/null 2>&1 || true
+            helm package "${dir}" -d /tmp/packages
+            helm push "/tmp/packages/${name}-${version}.tgz" "${OCI_REPO}"
+            pushed=$((pushed + 1))
+          done
+          echo "Pushed: ${pushed}"

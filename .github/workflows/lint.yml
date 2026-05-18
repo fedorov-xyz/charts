@@ -1,0 +1,32 @@
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Install yamllint & kubeconform
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq yamllint
+          curl -fsSL -o /tmp/kc.tgz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          sudo tar -xzf /tmp/kc.tgz -C /usr/local/bin kubeconform
+          kubeconform -v
+          yamllint --version
+          helm version
+
+      - name: make lint
+        run: make lint
